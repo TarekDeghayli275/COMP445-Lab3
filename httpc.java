@@ -43,22 +43,31 @@ public class httpc{
     private static String defaultPort = "8007";
     private static String[] protocol_host_args = new String[2];
 
+    private static boolean AKW = false;
+
     /**
      * Starting point of the application.
      * @param args cmd arguments.
      */
     public static void main (String[] args){
+        // initialHandshake();
         if ( args.length == 0){
             System.out.println("\nEnter httpc help to get more information.\n");
         }else{
             cmdParser(args);
         }
         if (needHelp) {
-            help();
+            while(!AKW){
+                help();
+            }
         }else if(isGetRequest){
-            get(url);
+            while(!AKW){
+                get(url);
+            }
         }else if (isPostRequest){
-            post(url);
+            while(!AKW){
+                post(url);
+            }
         }
     }
 
@@ -66,6 +75,9 @@ public class httpc{
      * This method takes the cmd args and parses them according to the different conditions of the application.
      * @param args an array of the command line arguments.
      */
+    public static void initialHandshake() {
+
+    }
     public static void cmdParser(String[] args){
         for (int i =0; i<args.length; i++){
             if (args[i].equalsIgnoreCase("-v")){
@@ -132,7 +144,7 @@ public class httpc{
      * @param inLineData is the data from the cmd after -d
      * @return a string that contains the same data but formatted as UTF-8 format
      */
-    public static String inLineDataParser(String inLineData) {
+public static String inLineDataParser(String inLineData) {
         //replaces all whitespace and non-visible character from the inline data
         inLineData = inLineData.replaceAll("\\s", "");
         String param = "";
@@ -217,7 +229,7 @@ public class httpc{
     /**
      * This is a common method that can be called for both get and post requests.
      */
-    public static void sendMessage(String messageBuilder) {
+    public static void sendMessage(String messageBuilder){
         //from UCPClient
         try(DatagramChannel channel = DatagramChannel.open()){
             int routerAddr= 3000;
@@ -245,7 +257,7 @@ public class httpc{
             Set<SelectionKey> keys = selector.selectedKeys();
             if(keys.isEmpty()){
                 System.out.println("No response after timeout");
-                return;
+                throw new Exception("No response after timeout");
             }
 
             // We just want a single response.
@@ -272,32 +284,9 @@ public class httpc{
                 System.out.print(payload);
             }
             keys.clear();
-        }
-        //
-        // try {
-        //     socket.connect(new InetSocketAddress(hostName, Integer.parseInt(defaultPort)));
-        //     BufferedWriter socketBufferedWriterOutputStream = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-        //     BufferedReader socketBufferedReaderInputStream = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        //     socketBufferedWriterOutputStream.write(messagBuilder);
-        //     socketBufferedWriterOutputStream.flush();
-        //     String response = " ";
+            AKW = true;
 
-        //     while ((response = socketBufferedReaderInputStream.readLine()) != null) {
-        //         if ((response.length()==0) && !isVerbose){
-        //             StringBuilder res_recvd = new StringBuilder();
-        //             while ((response = socketBufferedReaderInputStream.readLine()) != null){
-        //                 res_recvd.append(response).append("\r\n");
-        //             }
-        //             System.out.println(res_recvd.toString());
-        //             isVerbose = false;
-        //             break;
-        //         }else if (isVerbose){
-        //             System.out.println(response);
-        //         }
-        //     }
-        //     socketBufferedWriterOutputStream.close();
-        //     socketBufferedReaderInputStream.close();
-        //     socket.close();
+        }
         catch (Exception e) {
         //     System.out.println("ERROR from the sendMessage method.\n"+e.getMessage());
         }

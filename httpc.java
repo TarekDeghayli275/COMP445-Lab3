@@ -42,7 +42,6 @@ public class httpc{
     private static String messagBuilder = "";
     private static String defaultPort = "8007";
     private static String[] protocol_host_args = new String[2];
-    private static Socket socket = new Socket();
 
     /**
      * Starting point of the application.
@@ -234,13 +233,13 @@ public class httpc{
                     .create();
             channel.send(p.toBuffer(), routerAddress);
 
-            System.out.println("Sending to router at "+ routerAddr+"\n----------------\n"+ msg+"\n----------------");
+            //System.out.println("Sending to router at "+ routerAddr+"\n----------------\n"+ msg+"\n----------------");
 
             // Try to receive a packet within timeout.
             channel.configureBlocking(false);
             Selector selector = Selector.open();
             channel.register(selector, OP_READ);
-            System.out.println("Waiting for the response");
+            //System.out.println("Waiting for the response");
             selector.select(5000);
 
             Set<SelectionKey> keys = selector.selectedKeys();
@@ -254,11 +253,24 @@ public class httpc{
             SocketAddress router = channel.receive(buf);
             buf.flip();
             Packet resp = Packet.fromBuffer(buf);
-            System.out.println("Packet: "+ resp);
-            System.out.println("Router: "+  router);
             String payload = new String(resp.getPayload(), StandardCharsets.UTF_8);
-            System.out.println("Payload: "+   payload);
-
+            if(!isVerbose){
+                System.out.print("\n");
+                String[] lines = payload.split(System.getProperty("line.separator"));
+                int count=0;
+                for(int i=0;i<lines.length;i++){
+                    if(lines[i].length()==1){
+                        count = i+1;
+                        break;
+                    }
+                }
+                for(int i=count;i<lines.length;i++){
+                    System.out.println(lines[i]);
+                }
+                isVerbose=false;
+            }else{
+                System.out.print(payload);
+            }
             keys.clear();
         }
         //

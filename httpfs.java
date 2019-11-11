@@ -61,10 +61,9 @@ public class httpfs {
 
                 String payload = new String(packet.getPayload(), UTF_8);
                 System.out.println("Packet: "+ packet);
-                System.out.println("Payload: "+ payload);
-                System.out.println("Router: "+ router);
+                // System.out.println("Payload: "+ payload);
+                // System.out.println("Router: "+ router);
                 httpfsThread obj= new httpfsThread();
-                System.out.println("pyaload before sending :"+ payload);
                 obj.run(payload);
                 payload = obj.getCompleteMessage();
 
@@ -78,16 +77,6 @@ public class httpfs {
                 channel.send(resp.toBuffer(), router);
 
             }
-            // while (true) {
-            //     //
-            //     ByteBuffer buf = ByteBuffer
-            //         .allocate(Packet.MAX_LEN)
-            //         .order(ByteOrder.BIG_ENDIAN);
-
-            //     //
-            //     Socket clientSocket = serverSocket.accept();
-            //     new httpfsThread(clientSocket).start();
-            // }
         } catch (Exception e) {
             System.err.println("Could not connect to the port: " + portNumber);
             System.exit(-1);
@@ -136,8 +125,8 @@ public class httpfs {
      */
     private static class httpfsThread extends Thread {
 
-        private static Socket socket = null;
-        private static BufferedWriter out = null;
+        // private static Socket socket = null;
+        // private static BufferedWriter out = null;
         private static BufferedReader in = null;
         private static String[] requestParser = new String[3];
         private static String requestType = "";
@@ -174,12 +163,8 @@ public class httpfs {
          */
         public void run(String payload) {
             try { 
-                // 
-                System.out.println("inside run payload is: "+payload);
-                //
-                // String response = "";
+
                 String[] lines = payload.split(System.getProperty("line.separator"));
-                System.out.println("first line is: "+lines[0]);
                 requestParser = lines[0].split(" ");
                 requestType = requestParser[0];
                 pathFromClient = requestParser[1];
@@ -187,7 +172,7 @@ public class httpfs {
 
                 //we take the first line of the request and split it to get what kind of 
                 //request it is and pass to requestProcesser()
-                requestProcessor(requestType, pathFromClient);
+                requestProcessor(requestType, pathFromClient,payload);
 
                 //once all the processing is finished the "completeMessage" is send to the
                 //client and socket is closed.
@@ -222,10 +207,10 @@ public class httpfs {
          * @param requestType
          * @param pathFromClient
          */
-        private static void requestProcessor(String requestType, String pathFromClient) {
+        private static void requestProcessor(String requestType, String pathFromClient, String payload) {
 
-            // getAdditionalHeader_Data();
-            // processHeader(headerInfo);
+            getAdditionalHeader_Data(payload);
+            processHeader(headerInfo);
             if (requestType.equals("GET")) {
                 get(pathFromClient);
             } else if (requestType.equals("POST")) {
@@ -241,10 +226,13 @@ public class httpfs {
         /**
          * This mehtod is used to get all the information from the client's message and store it.
          */
-        private static void getAdditionalHeader_Data() {
+        private static void getAdditionalHeader_Data(String payload) {
             String response = "";
             boolean hasHeader = true;
             boolean hasData = true;
+            Reader inputString = new StringReader(payload);
+            in = new BufferedReader(inputString);
+
             try {
                 while (in.ready() && hasHeader) {
                     response = in.readLine();

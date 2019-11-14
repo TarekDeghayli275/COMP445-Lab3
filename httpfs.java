@@ -9,19 +9,7 @@ import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Scanner;
-
-
-// from UDPServer
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.channels.DatagramChannel;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Arrays.asList;
-//
+import java.util.logging.Logger;
 
 /*
 httpfs acts as the continously listening serverSocket which accepts any connection and then creates a seperate thread
@@ -29,8 +17,9 @@ to take care of that request. (thus we enable the feature of simultaniously mana
 */
 public class httpfs {
     private static boolean isVerbose = false;
-    private static String portNumber = "8007";
+    private static String portNumber = "8080";
     private static String currentDirectory = "./cwd";
+    private static Logger LOGGER = Logger.getLogger("httpfs logger:");
 
     /*
      * main where we create our ServerSocket and listen for requests, creating
@@ -38,46 +27,31 @@ public class httpfs {
      */
     public static void main(String[] args) throws IOException {
 
+        //create an object of transport() and initialize channel
+        //call initalHandShake()
+        //obj.listen() to wait for a request from the client
+        //get the request and creates the payload for the client
+        //  this is where we call specific methods of httpfs
+        //  the thread is supposed to return the payload for client
+        //call obj.sendData(payload, peerPort) to send the payload to client
+        //call terminatingHandShake()
+
         if (args.length >= 6) {
             System.err.println("\nEnter \"httpfs help\" to get more information.\n");
             System.exit(1);
         } else {
             cmdParser(args);
         }
-        try (DatagramChannel channel = DatagramChannel.open()) {
-            
-            channel.bind(new InetSocketAddress(Integer.parseInt(portNumber)));
-            ByteBuffer buf = ByteBuffer.allocate(Packet.MAX_LEN);
+
+        
+
+        try (ServerSocket serverSocket = new ServerSocket(Integer.parseInt(portNumber))) {
             System.out.println("Server has been instantiated at port " + portNumber);
-
-            for (; ; ) {
-                buf.clear();
-                SocketAddress router = channel.receive(buf);
-
-                // Parse a packet from the received raw data.
-                buf.flip();
-                Packet packet = Packet.fromBuffer(buf);
-                buf.flip();
-
-                String payload = new String(packet.getPayload(), UTF_8);
-                System.out.println("Packet: "+ packet);
-                // System.out.println("Payload: "+ payload);
-                // System.out.println("Router: "+ router);
-                httpfsThread obj= new httpfsThread();
-                obj.run(payload);
-                payload = obj.getCompleteMessage();
-
-                // Send the response to the router not the client.
-                // The peer address of the packet is the address of the client already.
-                // We can use toBuilder to copy properties of the current packet.
-                // This demonstrate how to create a new packet from an existing packet.
-                Packet resp = packet.toBuilder()
-                        .setPayload(payload.getBytes())
-                        .create();
-                channel.send(resp.toBuffer(), router);
-
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                new httpfsThread(clientSocket).start();
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             System.err.println("Could not connect to the port: " + portNumber);
             System.exit(-1);
         }
@@ -140,13 +114,13 @@ public class httpfs {
         private static String timeStamp = "";
         private static boolean overWrite = true;
 
-
         /**
          * This is the constrcutor that initialises all the variables for every requests receieved.
          * @param Socket
          */
-        public httpfsThread() {
+        public httpfsThread(Socket Socket) {
             super();
+            try {
                 requestType = "";
                 pathFromClient = "";
                 http = "";
@@ -155,17 +129,23 @@ public class httpfs {
                 dataFromClient = "";
                 bodyForClient = "";
                 completeMessage = "";
+                socket = Socket;
                 timeStamp = new SimpleDateFormat("dd/MM/yyyy:HH:mm:ss").format(Calendar.getInstance().getTime());
+                out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-        
+
         /**
          * This method is the starting point of every thread.
          */
-        public void run(String payload) {
-            try { 
-
-                String[] lines = payload.split(System.getProperty("line.separator"));
-                requestParser = lines[0].split(" ");
+        public void run() {
+            try {
+                String response = "";
+                response = in.readLine();
+                requestParser = response.split(" ");
                 requestType = requestParser[0];
                 pathFromClient = requestParser[1];
                 http = requestParser[2];
@@ -176,24 +156,24 @@ public class httpfs {
 
                 //once all the processing is finished the "completeMessage" is send to the
                 //client and socket is closed.
-                //out.write(completeMessage);
-                // out.flush();
-                // socket.shutdownOutput();
+                out.write(completeMessage);
+                out.flush();
+                socket.shutdownOutput();
                 
-                // StringBuilder log = new StringBuilder(socket.getInetAddress().toString()+":");
-                // log.append(socket.getLocalPort()+" ");
-                // log.append(response+" ");
-                // log.append(statusCode.toString()+" ");
-                // log.append(bodyForClient.getBytes("UTF-8").length);
-                // // System.out.println(log);
-                // if (httpfs.isVerbose){
-                //     httpfs.LOGGER.info(log.toString()+"\n");
-                // }
-                // BufferedWriter br = new BufferedWriter(new PrintWriter(new FileWriter("./cwd/log.txt", true)));
-                // br.write("["+timeStamp+"] "+log.toString()+"\n");
-                // br.flush();
-                // br.close();
-                // socket.close();
+                StringBuilder log = new StringBuilder(socket.getInetAddress().toString()+":");
+                log.append(socket.getLocalPort()+" ");
+                log.append(response+" ");
+                log.append(statusCode.toString()+" ");
+                log.append(bodyForClient.getBytes("UTF-8").length);
+                // System.out.println(log);
+                if (httpfs.isVerbose){
+                    httpfs.LOGGER.info(log.toString()+"\n");
+                }
+                BufferedWriter br = new BufferedWriter(new PrintWriter(new FileWriter("./cwd/log.txt", true)));
+                br.write("["+timeStamp+"] "+log.toString()+"\n");
+                br.flush();
+                br.close();
+                socket.close();
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -400,9 +380,6 @@ public class httpfs {
             }
             return true;
         }
-
-        public String getCompleteMessage() {
-            return completeMessage;
-        }
+  
     }
 }

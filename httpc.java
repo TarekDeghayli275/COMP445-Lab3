@@ -50,7 +50,8 @@ public class httpc{
      * @param args cmd arguments.
      */
     public static void main (String[] args){
-        // initialHandshake();
+        //create an object of transport() and initalize channel
+        //call initalHandShake()
         if ( args.length == 0){
             System.out.println("\nEnter httpc help to get more information.\n");
         }else{
@@ -69,6 +70,10 @@ public class httpc{
                 post(url);
             }
         }
+        //call obj.sendData() with messageBuilder
+        //payload = obj.listen() to wait for response from the server
+        //calls another method that prints the payload
+        //call terminatingHandShake()
     }
 
     /**

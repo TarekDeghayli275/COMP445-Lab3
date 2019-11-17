@@ -28,8 +28,13 @@ public class httpfs {
     public static void main(String[] args) throws IOException {
 
         //create an object of transport() and initialize channel
+        transport obj = new transport("server");
+        //System.out.println("server listen");
         //call initalHandShake()
         //obj.listen() to wait for a request from the client
+        String payload = obj.listen();
+        System.out.println("server listen done");
+        //System.out.println("helloooooo\n"+payload+"\nhellooooooo");
         //get the request and creates the payload for the client
         //  this is where we call specific methods of httpfs
         //  the thread is supposed to return the payload for client
@@ -42,19 +47,11 @@ public class httpfs {
         } else {
             cmdParser(args);
         }
-
-        
-
-        try (ServerSocket serverSocket = new ServerSocket(Integer.parseInt(portNumber))) {
-            System.out.println("Server has been instantiated at port " + portNumber);
-            while (true) {
-                Socket clientSocket = serverSocket.accept();
-                new httpfsThread(clientSocket).start();
-            }
-        } catch (IOException e) {
-            System.err.println("Could not connect to the port: " + portNumber);
-            System.exit(-1);
-        }
+        String newPayload = new httpfsThread().start(payload);
+        System.out.println("sending \n"+newPayload);
+        System.out.println("server going to sendData");
+        //System.out.println(newPayload);
+        obj.sendData("server", 41830, newPayload);
     }
 
     /**
@@ -118,33 +115,26 @@ public class httpfs {
          * This is the constrcutor that initialises all the variables for every requests receieved.
          * @param Socket
          */
-        public httpfsThread(Socket Socket) {
+        public httpfsThread() {
             super();
-            try {
-                requestType = "";
-                pathFromClient = "";
-                http = "";
-                statusCode = "";
-                headerInfo = "";
-                dataFromClient = "";
-                bodyForClient = "";
-                completeMessage = "";
-                socket = Socket;
-                timeStamp = new SimpleDateFormat("dd/MM/yyyy:HH:mm:ss").format(Calendar.getInstance().getTime());
-                out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            requestType = "";
+            pathFromClient = "";
+            http = "";
+            statusCode = "";
+            headerInfo = "";
+            dataFromClient = "";
+            bodyForClient = "";
+            completeMessage = "";
+            timeStamp = new SimpleDateFormat("dd/MM/yyyy:HH:mm:ss").format(Calendar.getInstance().getTime());
         }
 
         /**
          * This method is the starting point of every thread.
          */
-        public void run() {
+        public String start(String payload) {
             try {
-                String response = "";
-                response = in.readLine();
+                String response = payload.substring(0,payload.indexOf("\n"));
+                // response = in.readLine();
                 requestParser = response.split(" ");
                 requestType = requestParser[0];
                 pathFromClient = requestParser[1];
@@ -152,31 +142,33 @@ public class httpfs {
 
                 //we take the first line of the request and split it to get what kind of 
                 //request it is and pass to requestProcesser()
-                requestProcessor(requestType, pathFromClient,payload);
+                requestProcessor(requestType, pathFromClient, payload);
 
                 //once all the processing is finished the "completeMessage" is send to the
                 //client and socket is closed.
-                out.write(completeMessage);
-                out.flush();
-                socket.shutdownOutput();
+                // out.write(completeMessage);
+                // out.flush();
+                // socket.shutdownOutput();
                 
-                StringBuilder log = new StringBuilder(socket.getInetAddress().toString()+":");
-                log.append(socket.getLocalPort()+" ");
-                log.append(response+" ");
-                log.append(statusCode.toString()+" ");
-                log.append(bodyForClient.getBytes("UTF-8").length);
+                // StringBuilder log = new StringBuilder(socket.getInetAddress().toString()+":");
+                // log.append(socket.getLocalPort()+" ");
+                // log.append(response+" ");
+                // log.append(statusCode.toString()+" ");
+                // log.append(bodyForClient.getBytes("UTF-8").length);
                 // System.out.println(log);
-                if (httpfs.isVerbose){
-                    httpfs.LOGGER.info(log.toString()+"\n");
-                }
-                BufferedWriter br = new BufferedWriter(new PrintWriter(new FileWriter("./cwd/log.txt", true)));
-                br.write("["+timeStamp+"] "+log.toString()+"\n");
-                br.flush();
-                br.close();
-                socket.close();
+                // if (httpfs.isVerbose){
+                //     httpfs.LOGGER.info(log.toString()+"\n");
+                // }
+                // BufferedWriter br = new BufferedWriter(new PrintWriter(new FileWriter("./cwd/log.txt", true)));
+                // br.write("["+timeStamp+"] "+log.toString()+"\n");
+                // br.flush();
+                // br.close();
+                // socket.close();
             } catch (Exception e) {
                 e.printStackTrace();
             }
+            //System.out.println(completeMessage);
+            return completeMessage;
         }
 
         /**
@@ -271,7 +263,7 @@ public class httpfs {
             if (bodyForClient.length() != 0) {
                 completeMessage = completeMessage.concat(bodyForClient + "\r\n");
             }
-            // System.out.println("completeMessage: \n" + completeMessage);
+             //System.out.println("completeMessage: \n" + completeMessage);
         }
 
 

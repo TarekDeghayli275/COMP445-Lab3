@@ -51,6 +51,8 @@ public class httpc{
      */
     public static void main (String[] args){
         //create an object of transport() and initalize channel
+        transport obj = new transport("client");
+        //System.out.println("object created");
         //call initalHandShake()
         if ( args.length == 0){
             System.out.println("\nEnter httpc help to get more information.\n");
@@ -58,21 +60,21 @@ public class httpc{
             cmdParser(args);
         }
         if (needHelp) {
-            while(!AKW){
                 help();
-            }
         }else if(isGetRequest){
-            while(!AKW){
                 get(url);
-            }
         }else if (isPostRequest){
-            while(!AKW){
                 post(url);
-            }
         }
+        //System.out.println("client payload created and sending \n"+messagBuilder);
         //call obj.sendData() with messageBuilder
-        //payload = obj.listen() to wait for response from the server
-        //calls another method that prints the payload
+        obj.sendData("client", 8007, messagBuilder);
+        System.out.println("client done sending");
+        //System.out.println("client now listening");
+        String newPayload = obj.listen(); //to wait for response from the server
+        System.out.println("response is:");
+        System.out.println(newPayload);
+        System.out.println("done");//calls another method that prints the payload
         //call terminatingHandShake()
     }
 
@@ -80,9 +82,6 @@ public class httpc{
      * This method takes the cmd args and parses them according to the different conditions of the application.
      * @param args an array of the command line arguments.
      */
-    public static void initialHandshake() {
-
-    }
     public static void cmdParser(String[] args){
         for (int i =0; i<args.length; i++){
             if (args[i].equalsIgnoreCase("-v")){
@@ -243,7 +242,7 @@ public static String inLineDataParser(String inLineData) {
             SocketAddress routerAddress = new InetSocketAddress("localhost", 3000);
             Packet p = new Packet.Builder()
                     .setType(0)
-                    .setSequenceNumber(1L)
+                    .setSequenceNumber(1)
                     .setPortNumber(8007)
                     .setPeerAddress(address)
                     .setPayload(messageBuilder.getBytes())
@@ -347,7 +346,7 @@ public static String inLineDataParser(String inLineData) {
 
         messagBuilder = createMessage("GET /", arguments, hasHeaderData, false);
         
-        sendMessage(messagBuilder);        
+        //sendMessage(messagBuilder);        
     }
     
     /**
@@ -371,6 +370,6 @@ public static String inLineDataParser(String inLineData) {
 
         messagBuilder = createMessage("POST /", arguments, hasHeaderData, hasInLineData);
 
-        sendMessage(messagBuilder);
+        //sendMessage(messagBuilder);
     }
 }

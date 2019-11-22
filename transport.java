@@ -62,7 +62,6 @@ public class transport{
     public void sendData(String sendFrom, int peerPort, String payload) {
         try{
             boolean SRDone = false;
-            ByteBuffer buf = ByteBuffer.allocate(Packet.MAX_LEN);
             //call queueOfPackets to get a queue of packets
             packetQueue= queueOfPackets(payload);
             //System.out.println("got my queue of size "+packetQueue.size());
@@ -70,6 +69,7 @@ public class transport{
             // channel.register(selector, 1);
             // Set<SelectionKey> keys = selector.selectedKeys();
                 while (!SRDone) {
+                    ByteBuffer buf = ByteBuffer.allocate(Packet.MAX_LEN);
                     while (packetQueue.size() != 0 && window.size() != 3) {
                         //System.out.println("adding element to windown.");
                         // populate the ArrayLis and set flag to false
@@ -78,12 +78,12 @@ public class transport{
                     }
                     long startTime = System.currentTimeMillis();
                     while (buf.equals(emptybuf)){
-                        for (Packet packet : window) {
+                        for (Packet packetData : window) {
                             // send through the channel
                             System.out.println("*************sending a packet with :*************");
-                            String temp = new String(packet.getPayload());
+                            String temp = new String(packetData.getPayload());
                             System.out.println(temp);
-                            channel.send(packet.toBuffer(), routerAddress);
+                            channel.send(packetData.toBuffer(), routerAddress);
                         }
                         startTime = System.currentTimeMillis();
                         while((System.currentTimeMillis()-startTime)<10000){
@@ -129,10 +129,10 @@ public class transport{
                 Packet death = createPacket(5, 1L, peerPort, "");
                 while (!DeathSR) {
                     ByteBuffer buf_death = ByteBuffer.allocate(Packet.MAX_LEN);
-                    long startTime = System.currentTimeMillis();
                     System.out.println("************* sending death packet *************");
                     channel.send(death.toBuffer(), routerAddress);
-                    while ((System.currentTimeMillis()-startTime)<5000||buf_death.equals(emptybuf)){
+                    long startTime = System.currentTimeMillis();
+                    while ((System.currentTimeMillis()-startTime)<5000&&buf_death.equals(emptybuf)){
                         channel.receive(buf_death);
                     }
                     //System.out.println("checking");
@@ -390,12 +390,12 @@ public class transport{
                     // temp=packet.getPayload().toString();
                     if(position > payloadList.size()){
                         //check the index
-                        payloadList.add(payloadList.size(),s);
+                        payloadList.add(s);
                         Packet resp_0 = createPacket(3, packet.getSequenceNumber(), port, "");
                         channel.send(resp_0.toBuffer(), routerAddress);
                     }
                     else{
-                        payloadList.add(position,s);
+                        payloadList.add(position-1,s);
                         Packet resp_0 = createPacket(3, packet.getSequenceNumber(), port, "");
                         channel.send(resp_0.toBuffer(), routerAddress);
                     }

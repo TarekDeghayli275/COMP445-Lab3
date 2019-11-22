@@ -72,10 +72,24 @@ public class httpc{
         System.out.println("client done sending");
         //System.out.println("client now listening");
         String newPayload = obj.listen(); //to wait for response from the server
-        System.out.println("response is:");
-        System.out.println(newPayload);
         System.out.println("done");//calls another method that prints the payload
         //call terminatingHandShake()
+        if(!isVerbose){
+            String[] lines = newPayload.split(System.getProperty("line.separator"));
+            int count=0;
+            for(int i=0;i<lines.length;i++){
+                if(lines[i].length()==1){
+                    count = i+1;
+                    break;
+                }
+            }
+            for(int i=count;i<lines.length;i++){
+                System.out.println(lines[i]);
+            }
+            isVerbose=false;
+        }else{
+            System.out.print(newPayload);
+        }
     }
 
     /**

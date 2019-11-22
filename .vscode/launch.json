@@ -9,8 +9,8 @@
             "name": "Debug (Launch) - Current File",
             "request": "launch",
             "mainClass": "${file}",
-            "args": "-p 8007"
-            // "args": "get /"
+            // "args": "-p 8007"
+            "args": "get /th.txt"
         },
     ]
 }

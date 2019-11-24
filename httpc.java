@@ -42,7 +42,8 @@ public class httpc{
     private static String messagBuilder = "";
     private static String defaultPort = "8007";
     private static String[] protocol_host_args = new String[2];
-    private static Socket socket = new Socket();
+
+    private static boolean AKW = false;
 
     /**
      * Starting point of the application.
@@ -50,23 +51,45 @@ public class httpc{
      */
     public static void main (String[] args){
         //create an object of transport() and initalize channel
-        //call initalHandShake()
+        transport obj = new transport("client");
+        //System.out.println("object created");
+        obj.handShake();
         if ( args.length == 0){
             System.out.println("\nEnter httpc help to get more information.\n");
         }else{
             cmdParser(args);
         }
         if (needHelp) {
-            help();
+                help();
         }else if(isGetRequest){
-            get(url);
+                get(url);
         }else if (isPostRequest){
-            post(url);
+                post(url);
         }
+        //System.out.println("client payload created and sending \n"+messagBuilder);
         //call obj.sendData() with messageBuilder
-        //payload = obj.listen() to wait for response from the server
-        //calls another method that prints the payload
+        obj.sendData("client", 8007, messagBuilder);
+        //System.out.println("client done sending");
+        //System.out.println("client now listening");
+        String newPayload = obj.listen(); //to wait for response from the server
+        //System.out.println("done");//calls another method that prints the payload
         //call terminatingHandShake()
+        if(!isVerbose){
+            String[] lines = newPayload.split(System.getProperty("line.separator"));
+            int count=0;
+            for(int i=0;i<lines.length;i++){
+                if(lines[i].length()==1){
+                    count = i+1;
+                    break;
+                }
+            }
+            for(int i=count;i<lines.length;i++){
+                System.out.println(lines[i]);
+            }
+            isVerbose=false;
+        }else{
+            System.out.print(newPayload);
+        }
     }
 
     /**
@@ -139,7 +162,7 @@ public class httpc{
      * @param inLineData is the data from the cmd after -d
      * @return a string that contains the same data but formatted as UTF-8 format
      */
-    public static String inLineDataParser(String inLineData) {
+public static String inLineDataParser(String inLineData) {
         //replaces all whitespace and non-visible character from the inline data
         inLineData = inLineData.replaceAll("\\s", "");
         String param = "";
@@ -224,7 +247,7 @@ public class httpc{
     /**
      * This is a common method that can be called for both get and post requests.
      */
-    public static void sendMessage(String messageBuilder) {
+    public static void sendMessage(String messageBuilder){
         //from UCPClient
         try(DatagramChannel channel = DatagramChannel.open()){
             int routerAddr= 3000;
@@ -233,26 +256,26 @@ public class httpc{
             SocketAddress routerAddress = new InetSocketAddress("localhost", 3000);
             Packet p = new Packet.Builder()
                     .setType(0)
-                    .setSequenceNumber(1L)
+                    .setSequenceNumber(1)
                     .setPortNumber(8007)
                     .setPeerAddress(address)
                     .setPayload(messageBuilder.getBytes())
                     .create();
             channel.send(p.toBuffer(), routerAddress);
 
-            System.out.println("Sending to router at "+ routerAddr+"\n----------------\n"+ msg+"\n----------------");
+            //System.out.println("Sending to router at "+ routerAddr+"\n----------------\n"+ msg+"\n----------------");
 
             // Try to receive a packet within timeout.
             channel.configureBlocking(false);
             Selector selector = Selector.open();
             channel.register(selector, OP_READ);
-            System.out.println("Waiting for the response");
+            //System.out.println("Waiting for the response");
             selector.select(5000);
 
             Set<SelectionKey> keys = selector.selectedKeys();
             if(keys.isEmpty()){
                 System.out.println("No response after timeout");
-                return;
+                throw new Exception("No response after timeout");
             }
 
             // We just want a single response.
@@ -260,38 +283,28 @@ public class httpc{
             SocketAddress router = channel.receive(buf);
             buf.flip();
             Packet resp = Packet.fromBuffer(buf);
-            System.out.println("Packet: "+ resp);
-            System.out.println("Router: "+  router);
             String payload = new String(resp.getPayload(), StandardCharsets.UTF_8);
-            System.out.println("Payload: "+   payload);
-
+            if(!isVerbose){
+                System.out.print("\n");
+                String[] lines = payload.split(System.getProperty("line.separator"));
+                int count=0;
+                for(int i=0;i<lines.length;i++){
+                    if(lines[i].length()==1){
+                        count = i+1;
+                        break;
+                    }
+                }
+                for(int i=count;i<lines.length;i++){
+                    System.out.println(lines[i]);
+                }
+                isVerbose=false;
+            }else{
+                System.out.print(payload);
+            }
             keys.clear();
-        }
-        //
-        // try {
-        //     socket.connect(new InetSocketAddress(hostName, Integer.parseInt(defaultPort)));
-        //     BufferedWriter socketBufferedWriterOutputStream = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-        //     BufferedReader socketBufferedReaderInputStream = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        //     socketBufferedWriterOutputStream.write(messagBuilder);
-        //     socketBufferedWriterOutputStream.flush();
-        //     String response = " ";
+            AKW = true;
 
-        //     while ((response = socketBufferedReaderInputStream.readLine()) != null) {
-        //         if ((response.length()==0) && !isVerbose){
-        //             StringBuilder res_recvd = new StringBuilder();
-        //             while ((response = socketBufferedReaderInputStream.readLine()) != null){
-        //                 res_recvd.append(response).append("\r\n");
-        //             }
-        //             System.out.println(res_recvd.toString());
-        //             isVerbose = false;
-        //             break;
-        //         }else if (isVerbose){
-        //             System.out.println(response);
-        //         }
-        //     }
-        //     socketBufferedWriterOutputStream.close();
-        //     socketBufferedReaderInputStream.close();
-        //     socket.close();
+        }
         catch (Exception e) {
         //     System.out.println("ERROR from the sendMessage method.\n"+e.getMessage());
         }
@@ -347,7 +360,7 @@ public class httpc{
 
         messagBuilder = createMessage("GET /", arguments, hasHeaderData, false);
         
-        sendMessage(messagBuilder);        
+        //sendMessage(messagBuilder);        
     }
     
     /**
@@ -371,6 +384,6 @@ public class httpc{
 
         messagBuilder = createMessage("POST /", arguments, hasHeaderData, hasInLineData);
 
-        sendMessage(messagBuilder);
+        //sendMessage(messagBuilder);
     }
 }

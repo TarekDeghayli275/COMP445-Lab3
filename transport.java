@@ -80,13 +80,13 @@ public class transport{
                     while (buf.equals(emptybuf)){
                         for (Packet packetData : window) {
                             // send through the channel
-                            System.out.println("*************sending a packet with :*************");
+                            // System.out.println("*************sending a packet with :*************");
                             String temp = new String(packetData.getPayload());
-                            System.out.println(temp);
+                            // System.out.println(temp);
                             channel.send(packetData.toBuffer(), routerAddress);
                         }
                         startTime = System.currentTimeMillis();
-                        while((System.currentTimeMillis()-startTime)<10000){
+                        while((System.currentTimeMillis()-startTime)<8000 && buf.equals(emptybuf)){
                             channel.receive(buf);
                         }
                     }
@@ -123,13 +123,13 @@ public class transport{
                         // keys.clear();
                     }
                 }
-                System.out.println("************* got all my akn, going to kill now *************");
+                // System.out.println("************* got all my akn, going to kill now *************");
                 boolean DeathSR = false;
                 // create a endOfMessagePacket and send it.
                 Packet death = createPacket(5, 1L, peerPort, "");
                 while (!DeathSR) {
                     ByteBuffer buf_death = ByteBuffer.allocate(Packet.MAX_LEN);
-                    System.out.println("************* sending death packet *************");
+                    // System.out.println("************* sending death packet *************");
                     channel.send(death.toBuffer(), routerAddress);
                     long startTime = System.currentTimeMillis();
                     while ((System.currentTimeMillis()-startTime)<5000&&buf_death.equals(emptybuf)){
@@ -143,7 +143,7 @@ public class transport{
                         //System.out.println(resp.getType());
                         //System.out.println(resp.getType() == 6);
                         if (resp_6.getType() == 6) {
-                            System.out.println("************* got the death akn *************");
+                            // System.out.println("************* got the death akn *************");
                             DeathSR = true;
                             Packet deathakn = createPacket(7, 1L, peerPort, "11");
                             channel.send(deathakn.toBuffer(), routerAddress);
@@ -162,96 +162,66 @@ public class transport{
 
     // this method is called firstly to establish the connection
     // add logger/sysout to keep track of the error messages and drop packets
-    public static void handShake(String handShakeFrom) {
+    public void handShake() {
         try{
             boolean done=false;
-            int count=0;
-            System.out.println("\tInitializing Handshake protocol.\n----------------------");
-            if (handShakeFrom.equals("client")) {
-                channel.configureBlocking(false);
-                Selector selector = Selector.open();
-                channel.register(selector, 1);
-                Set<SelectionKey> keys = selector.selectedKeys();
-                for (int i = 0; i < 10; i++) {
-                    if (!done) {
-                        count++;
-                        System.out.println("\t***Attempt number: " + (i + 1) + "***");
-                        // call createPacket as type SYN
-                        Packet p1 = createPacket(1, 1L, 8007, "");
-                        // and send the packet through the router.
-                        channel.send(p1.toBuffer(), routerAddress);
-                        selector.select(5000);
-                        keys = selector.selectedKeys();
-                        // while no response
-                        if (keys.isEmpty()) {
-                            if (i == 9) {
-                                System.out.println(
-                                        "\tMAX attempt number reached.\n\tConnection too unstable\n\tTRY AGAIN LATER");
-                                System.exit(1);
-                            }
-                            continue;
-                        }
-                        ByteBuffer buf = ByteBuffer.allocate(Packet.MAX_LEN);
-                        // Parse a packet from the received raw data.
-                        channel.receive(buf);
-                        buf.flip();
-                        Packet resp = Packet.fromBuffer(buf);
-                        if (resp.getType() == 2 && resp.getPayload().equals("".getBytes())) {
-                            // its a SYN-AKN packet
-                            p1 = resp.toBuilder().create();
-                            // created a SYN-AKN packet to send back to server
-                            channel.send(p1.toBuffer(), routerAddress);
-                            Thread.sleep(3000);
-                            done = true;
-                        }
-                    }
-                }
-            } else {
-                channel.configureBlocking(false);
-                Selector selector = Selector.open();
-                channel.register(selector,SelectionKey.OP_READ);
-                Set<SelectionKey> keys = selector.selectedKeys();
-                while (!done) {
-                    count++;
-                    System.out.println("\t***Attempt number: " + count + "***");
-                    selector.select(5000);
-                    // while no response
-                    while (keys.isEmpty()) {
-                        selector.select(5000);
-                        keys = selector.selectedKeys();
-                    }
+            System.out.println("\tInitializing Handshake protocol.\n--------------------------------------------");
+            channel.configureBlocking(false);
+            for (int i = 0; i < 5; i++) {
+                if (!done) {
                     ByteBuffer buf = ByteBuffer.allocate(Packet.MAX_LEN);
-                    channel.receive(buf);
-                    buf.flip();
-                    Packet resp = Packet.fromBuffer(buf);
-                    if (resp.getType() == 1 && resp.getPayload().equals("".getBytes())) {
-                        // its a SYN-AKN packet
-                        resp = createPacket(2, (long)1, 41830, "");
-                        // created a SYN-AKN packet to send back to server
-                        channel.send(resp.toBuffer(), routerAddress);
-                        channel.configureBlocking(false);
-                        selector = Selector.open();
-                        channel.register(selector, 1);
-                        selector.select(8000);
-                        keys = selector.selectedKeys();
-                        // while no response
-                        if (keys.isEmpty()) {
-                            // assume after x amount of time, if we got no SYN packet or SYN-AKN that
-                            // everything is good.
-                            done = true;
+                    System.out.println("\t*** Attempt number: " + (i + 1) + " ***");
+                    // call createPacket as type SYN
+                    Packet p1 = createPacket(1, 1L, 8007, "");
+                    // and send the packet through the router.
+                    channel.send(p1.toBuffer(), routerAddress);
+                    long startTime = System.currentTimeMillis();
+                    while((System.currentTimeMillis()-startTime)<4000 && buf.equals(emptybuf)){
+                        channel.receive(buf);
+                    }
+                    //received someting
+                    if(!buf.equals(emptybuf)){
+                        buf.flip();
+                        Packet resp_2 = Packet.fromBuffer(buf);
+                        if(resp_2.getType()==2){
+                            Packet p3 = createPacket(3, 1L, 8007, "");
+                            channel.send(p3.toBuffer(), routerAddress);//dont realy care if it gets lost.
+                            done=true;
                         }
                     }
                 }
             }
-            System.out.println("----------------------\n\tHandshake Established...");
+            if(!done){
+                System.out.println("--------------------------------------------\n\tHandshake failed...");
+                System.exit(1);
+            }
+            System.out.println("--------------------------------------------\n\tHandshake Established...");
         }catch(Exception e){
             e.printStackTrace();
         }
     }
-
-    // this method marks the end of the connection
-    public void termiantingHandShake() {
-        // fuck this shit.
+    //waits 8 seconds just in case FIN-SYN-ACK is lost.
+    public void terminatingHandShake() {
+        try{
+            long startTime = System.currentTimeMillis();
+            while((System.currentTimeMillis()-startTime)<8000){
+                ByteBuffer buf = ByteBuffer.allocate(Packet.MAX_LEN);
+                long startTime2 = System.currentTimeMillis();
+                while((System.currentTimeMillis()-startTime2)<2000 && buf.equals(emptybuf)){
+                    channel.receive(buf);
+                }
+                if(!buf.equals(emptybuf)){
+                    buf.flip();
+                    Packet packet = Packet.fromBuffer(buf);
+                    if(packet.getType()==6){
+                        Packet response = createPacket(7, packet.getSequenceNumber(), clientPort , "");
+                        channel.send(response.toBuffer(), routerAddress);
+                    }
+                }
+            }
+        }catch(Exception e){
+            //nothing
+        }
     }
 
     // this method takes in the payload and calculates the numberOfPacketsNeeded
@@ -341,18 +311,18 @@ public class transport{
                 Packet packet = Packet.fromBuffer(buf);
                 // buf.flip();
                 String s = new String(packet.getPayload());
-                System.out.println("got a packet, info: \n"+s);
+                //System.out.println("got a packet, info: \n"+s);
                 //make sure we get an Akn for the death.
                 if(packet.getType()==5){
                     boolean DeathDeathSR =false;
                     Packet resp_0 = createPacket(6, packet.getSequenceNumber(), port , "1");
                     while(!DeathDeathSR){
-                        System.out.println("************* sending akn for death *************");
+                        // System.out.println("************* sending akn for death *************");
                         channel.send(resp_0.toBuffer(), routerAddress);
                         long startTime = System.currentTimeMillis();
                         // buf.clear();
                         buf = ByteBuffer.allocate(Packet.MAX_LEN);
-                        while(buf.equals(emptybuf)||(System.currentTimeMillis()-startTime)<5000){
+                        while(buf.equals(emptybuf)&&(System.currentTimeMillis()-startTime)<5000){
                             channel.receive(buf);
                         }
                         if(!buf.equals(emptybuf)){
@@ -362,14 +332,18 @@ public class transport{
                             if(death.getType()==5){
                                 channel.send(resp_0.toBuffer(), routerAddress);
                             }
+                            //should not be possible
                             else if(death.getType()==6){
-                                System.out.println("type 6 received. Bullshit!!!");
+                                // System.out.println("type 6 received. Bullshit!!!");
                             }
                             else if(death.getType()==7){
-                                System.out.println("************* got akn for death *************");
+                                // System.out.println("************* got akn for death *************");
                                 DeathDeathSR=true;
                                 SRdone=true;
                             }
+                        }
+                        else{
+                            channel.send(resp_0.toBuffer(), routerAddress);
                         }
                         //System.out.println("got a something");
                         // channel.receive(buf);
@@ -377,9 +351,17 @@ public class transport{
                     }
                 }
                 else if(packet.getType()==6){
-                    System.out.println("************* got a type 6 and sending back 7 *************");
+                    // System.out.println("************* got a type 6 and sending back 7 *************");
                     Packet resp_0 = createPacket(7, packet.getSequenceNumber(), port , "11");
                     channel.send(resp_0.toBuffer(), routerAddress);
+                }
+                //case of the handshake
+                else if(packet.getType()==1){
+                    Packet resp_2 = createPacket(2, packet.getSequenceNumber(), port, "");
+                    channel.send(resp_2.toBuffer(), routerAddress);
+                }
+                else if(packet.getType()==3){
+                    //do nothing. its a SYN-ACK-ACK;
                 }
                 //doesnt have this packet before
                 else if(!table.containsKey((int)packet.getSequenceNumber())){
@@ -402,7 +384,7 @@ public class transport{
                     // channel.send(resp_0.toBuffer(), routerAddress);
                     //System.out.println("sending akn for "+(int)packet.getSequenceNumber());
                 }else{
-                    System.out.println("************* sending akn for \n"+s);
+                    // System.out.println("************* sending akn for \n"+s);
                     Packet resp_0 = createPacket(3, packet.getSequenceNumber(), port, "");
                     channel.send(resp_0.toBuffer(), routerAddress);
                 }
@@ -411,7 +393,7 @@ public class transport{
             for (String payl: payloadList) {
                 payload= payload + payl;
             }
-            System.out.println("Payload all together is "+payload);
+            //System.out.println("Payload all together is "+payload);
         }catch(Exception e){
             e.printStackTrace();
         }

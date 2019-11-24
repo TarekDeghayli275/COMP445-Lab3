@@ -53,7 +53,7 @@ public class httpc{
         //create an object of transport() and initalize channel
         transport obj = new transport("client");
         //System.out.println("object created");
-        //call initalHandShake()
+        obj.handShake();
         if ( args.length == 0){
             System.out.println("\nEnter httpc help to get more information.\n");
         }else{
@@ -69,10 +69,10 @@ public class httpc{
         //System.out.println("client payload created and sending \n"+messagBuilder);
         //call obj.sendData() with messageBuilder
         obj.sendData("client", 8007, messagBuilder);
-        System.out.println("client done sending");
+        //System.out.println("client done sending");
         //System.out.println("client now listening");
         String newPayload = obj.listen(); //to wait for response from the server
-        System.out.println("done");//calls another method that prints the payload
+        //System.out.println("done");//calls another method that prints the payload
         //call terminatingHandShake()
         if(!isVerbose){
             String[] lines = newPayload.split(System.getProperty("line.separator"));

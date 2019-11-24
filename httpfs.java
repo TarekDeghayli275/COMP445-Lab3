@@ -27,31 +27,53 @@ public class httpfs {
      */
     public static void main(String[] args) throws IOException {
 
-        //create an object of transport() and initialize channel
-        transport obj = new transport("server");
-        //System.out.println("server listen");
-        //call initalHandShake()
-        //obj.listen() to wait for a request from the client
-        String payload = obj.listen();
-        System.out.println("server listen done");
-        //System.out.println("helloooooo\n"+payload+"\nhellooooooo");
-        //get the request and creates the payload for the client
-        //  this is where we call specific methods of httpfs
-        //  the thread is supposed to return the payload for client
-        //call obj.sendData(payload, peerPort) to send the payload to client
-        //call terminatingHandShake()
-
         if (args.length >= 6) {
             System.err.println("\nEnter \"httpfs help\" to get more information.\n");
             System.exit(1);
         } else {
             cmdParser(args);
         }
-        String newPayload = new httpfsThread().start(payload);
-        System.out.println("sending \n"+newPayload);
-        System.out.println("server going to sendData");
-        //System.out.println(newPayload);
-        obj.sendData("server", 41830, newPayload);
+        System.out.println("Server has been instantiated at port " + portNumber+"\n");
+        transport obj = new transport("server");
+        while (true) {
+            String payload = obj.listen();
+            
+            // System.out.println("server listen done");
+            // System.out.println("payload in httpfs.java is "+payload);
+            String newPayload = new httpfsThread().start(payload);
+            if (isVerbose){
+                int i = 0;
+                String[] headerInVerbose = newPayload.split("\n");
+                while (!headerInVerbose[i].equalsIgnoreCase("\r")){
+                    System.out.println(headerInVerbose[i]);
+                    i++;
+                }
+            }
+            obj.sendData("server", 41830, newPayload);
+            obj.terminatingHandShake();
+            System.out.println("\nRequest processed. Waiting for another request.");
+        }
+
+        // //create an object of transport() and initialize channel
+        // transport obj = new transport("server");
+        // //System.out.println("server listen");
+        // //call initalHandShake()
+        // //obj.listen() to wait for a request from the client
+        // String payload = obj.listen();
+        // System.out.println("server listen done");
+        // //System.out.println("helloooooo\n"+payload+"\nhellooooooo");
+        // //get the request and creates the payload for the client
+        // //  this is where we call specific methods of httpfs
+        // //  the thread is supposed to return the payload for client
+        // //call obj.sendData(payload, peerPort) to send the payload to client
+        // //call terminatingHandShake()
+        // System.out.println("payload in httpfs.java is "+payload);
+        // String newPayload = new httpfsThread().start(payload);
+        // System.out.println("sending \n"+newPayload);
+        // System.out.println("server going to sendData");
+        // //System.out.println(newPayload);
+        // obj.sendData("server", 41830, newPayload);
+        // obj.terminatingHandShake();
     }
 
     /**
@@ -133,7 +155,8 @@ public class httpfs {
          */
         public String start(String payload) {
             try {
-                String response = payload.substring(0,payload.indexOf("\n"));
+                // System.out.println(payload);
+                String response = payload.substring(0,payload.indexOf("\r\n"));
                 // response = in.readLine();
                 requestParser = response.split(" ");
                 requestType = requestParser[0];
